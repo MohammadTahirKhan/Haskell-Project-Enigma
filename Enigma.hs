@@ -82,11 +82,34 @@ module Enigma where
 
 {- Part 2: Finding the Longest Menu -}
 
-  type Menu = Bool -- the supplied type is not correct; fix it!
-  type Crib = Bool -- the supplied type is not correct; fix it!
+  type Menu = [Int] 
+  type Crib = [(Char,Char)] 
+  type IndexedCribItem = (Int, (Char, Char))
+  type IndexedCrib = [IndexedCribItem]
+
+  indexCrib :: Crib -> [IndexedCribItem]
+  indexCrib crib = zip [0..] (crib)
+
+  findItem :: Char -> IndexedCrib -> [IndexedCribItem]
+  findItem char [] = []
+  findItem char ((i,(p,c)):xs) = if p == char then (i,(p,c)) : findItem char xs else findItem char xs
+  
+  findMenus :: IndexedCrib -> [IndexedCribItem] -> [Menu]
+  findMenus cribi [] = []
+  findMenus cribi ((i,(p,c)):xs)  | findItem c cribi /= [] = 
+                                    (map (i:)) (findMenus newCribi (findItem c newCribi)) ++ (findMenus cribi xs)
+                                  | otherwise = [[i]] ++ findMenus cribi xs
+                                 where
+                                   newCribi = [(ci,(cp,cc)) | (ci,(cp,cc)) <- cribi , ci /= i]
+  
+  findLongestMenu :: [Menu] -> Menu
+  findLongestMenu menu = head (sortBy (\xs ys -> compare (length ys) (length xs)) menu)
 
   longestMenu :: Crib -> Menu
-  longestMenu _ = False
+  longestMenu crib | length (cribi) == 0 = []
+                   | otherwise = findLongestMenu(findMenus cribi cribi)
+                  where 
+                    cribi = indexCrib crib
 
 {- Part 3: Simulating the Bombe -}
   
