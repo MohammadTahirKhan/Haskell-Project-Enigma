@@ -113,8 +113,54 @@ module Enigma where
 
 {- Part 3: Simulating the Bombe -}
   
+  advanceByInt :: Offsets -> Int -> Int -> Offsets
+  advanceByInt (ol, om, or) amount count | count == amount = (ol, om, or)
+                                         | otherwise = advanceByInt (newOl, newOm, newOr) amount (count+1)
+                                        where
+                                          (newOl, newOm, newOr) = advance rotor1 rotor2 rotor3 (ol, om, or)
+
+  addSteckerPair :: Stecker -> Stecker -> Maybe Stecker
+  addSteckerPair [(a,b)] board | ((a,b) `elem` board) || ((b,a) `elem` board) = Just board
+                               | (charInStecker a board) || (charInStecker b board) = Nothing
+                               | otherwise = Just ((a,b):board)
+
+  charInStecker :: Char -> Stecker -> Bool
+  charInStecker char ((x,y):xs) | length steck == 1 = if x == char || y == char then True else False
+                                | otherwise =  if x == char || y == char then True else charInStecker char xs
+                                where 
+                                  steck = ((x,y):xs)
+
+  followMenu :: Crib -> Menu -> Stecker -> Offsets -> Maybe Stecker
+  followMenu crib (x:xs) board (ol, om, or) 
+    | length (x:xs) == 0 = []
+    | (addSteckerPair [(encodeC, (snd (crib !! x)))] board) == Nothing = Nothing
+    | length (x:xs) == 1 = addSteckerPair [(encodeC, (snd (crib !! x)))] board
+    | otherwise = followMenu crib (xs) (fromJust (addSteckerPair [(encodeC, (snd (crib !! x)))] board)) (ol, om, or)
+    where
+      encodeC = encodeChar (stecker board (fst (crib !! x))) (SimpleEnigma rotor1 rotor2 rotor3 reflectorB (advanceByInt (ol, om, or) (x+1) 0))
+
+  nextSteckerPair :: Stecker -> Stecker
+  nextSteckerPair [(a,b)] = [(a, (['A'..'Z'] !! (mod ((alphaPos b) + 1) 26)))]
+
+  findStecker :: Crib -> Menu -> Stecker -> Offsets -> Maybe Stecker
+  findStecker crib menu [(a,b)] (ol, om, or) | followMenu crib menu [(a,b)] (ol, om, or) == Nothing =
+                                               if alphaPos b == (alphaPos a - 1) `mod` 26 then Nothing else findNextStecker
+                                             | otherwise = followMenu crib menu [(a,b)] (ol, om, or)
+                                            where 
+                                              findNextStecker = findStecker crib menu (nextSteckerPair [(a,b)]) (ol, om, or)
+
+  breakingEnigma :: Crib -> Menu -> Stecker -> Offsets -> Maybe (Offsets, Stecker)
+  breakingEnigma crib menu steck (ol, om, or)  
+    | (findStecker crib menu steck (ol, om, or)) == Nothing =
+      if (ol, om, or) == (25,25,25) then Nothing 
+      else breakingEnigma crib menu steck (advanceByInt (ol, om, or) 1 0)
+    | otherwise =  Just ((ol, om, or) , fromJust (findStecker crib menu steck (ol, om, or)))
+
   breakEnigma :: Crib -> Maybe (Offsets, Stecker)
-  breakEnigma _ = Nothing
+  breakEnigma crib = breakingEnigma crib (longestMenu crib) initialSteckerBoard (0,0,0)
+    where
+      initialSteckerBoard = [(fst (crib !! (head (longestMenu crib))), fst (crib !! (head (longestMenu crib))))]
+
 
 {- Useful definitions and functions -}
 
