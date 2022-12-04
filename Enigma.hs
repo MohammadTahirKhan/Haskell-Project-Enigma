@@ -132,7 +132,7 @@ module Enigma where
 
   followMenu :: Crib -> Menu -> Stecker -> Offsets -> Maybe Stecker
   followMenu crib (x:xs) board (ol, om, or) 
-    | length (x:xs) == 0 = []
+    | length (x:xs) == 0 = Just board
     | (addSteckerPair [(encodeC, (snd (crib !! x)))] board) == Nothing = Nothing
     | length (x:xs) == 1 = addSteckerPair [(encodeC, (snd (crib !! x)))] board
     | otherwise = followMenu crib (xs) (fromJust (addSteckerPair [(encodeC, (snd (crib !! x)))] board)) (ol, om, or)
